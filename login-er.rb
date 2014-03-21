@@ -31,28 +31,28 @@ tempvar2=Array.new()	##naming
 
 
 
-def psaxe_gia (search_string, arxeia)
-	for file in arxeia do
+def search_for (search_string, files)
+	for file in files do
 		begin
 			if IO.read(file).include?(search_string) then
 				return 0
 			end
 		rescue Errno::ENOENT
-			puts "To arxeio %s den yparxei pia !!!????!!?!?!?!?".bg_red % [file]
+			puts "The file %s doesn't exist anymore?!?!!?!?!?!?".bg_red % [file]
 			return 2
 		end
 	end
 	return 1
 end
 
-def typose_apo (search_string, arxeia)
-	for file in arxeia do
+def print_from (search_string, files)
+	for file in files do
 		begin
 			IO.foreach(file) {|blah| if blah.include?search_string then 
 				puts blah
 			end}
 		rescue Errno::ENOENT
-			puts "To arxeio %s den yparxei pia !!!????!!?!?!?!?".bg_red % [file]
+			puts "The file %s doesn't exist anymore???!!?!?!?!?".bg_red % [file]
 			return 2
 		end
 	end
@@ -60,52 +60,51 @@ end
 
 
 #
-#thermokrasia
+#temperature
 ###########
 begin
 	puts "\n__________________________________________________________\n\n"
 	temperature=IO.read("/sys/class/thermal/thermal_zone0/temp")
 rescue Errno::ENOENT
-	puts "den yparxei to arxeio me thn thermokrasia !?!?!?!".bg_red
+	puts "the sysfs temperature file doesn't exist !?!?!?!".bg_red
 	puts "\n__________________________________________________________\n\n"
 else
 	if (temperature.to_f/1000 > 65) then
-		puts "h thermokrasia tou cpu einai : %.3fC".bg_red % [temperature.to_f/1000]
-		puts "\n__________________________________________________________\n\n"
+		puts "the cpu temperature is : %.3fC".bg_red % [temperature.to_f/1000]
 	else
-		puts "h thermokrasia tou cpu einai : %.3fC".bg_green % [temperature.to_f/1000]
-		puts "\n__________________________________________________________\n\n"
+		puts "the cpu temperature is : %.3fC".bg_green % [temperature.to_f/1000]
 	end
 
+	puts "\n__________________________________________________________\n\n"
 end
 ###########
 
 
 #
-#logs apache kai sys authentication
+#apache kai sys authentication logs
 #########
 useful_files_array=Dir.glob("/var/log/auth*")
 useful_files_array+=Dir.glob("/var/log/apache2/error.log*")
 useful_files_array=useful_files_array.select {|blah| blah !~ /(.*)gz/}
 
-if (psaxe_gia("user", useful_files_array.select {
+if (search_for("user", useful_files_array.select {
     |blah| blah =~ /\/var\/log\/apache2\/error(.*)/ }) == 0) then
-	puts "vrethikan apache authentication failures :\n\n".bg_red
-	typose_apo("user", useful_files_array.select {
+	puts "apache authentication failures have been found :\n\n".bg_red
+	print_from("user", useful_files_array.select {
 	    |blah| blah =~ /\/var\/log\/apache2\/error(.*)/ })
 else
-	puts "den yparxoun authentication errors sta logs tou apache".bg_green
+	puts "there are no authentication failures in the apache logs".bg_green
 end
 puts "\n__________________________________________________________\n\n"
 
-if (psaxe_gia("ailed", useful_files_array.select {
+if (search_for("ailed", useful_files_array.select {
    |blah| blah =~ /\/var\/log\/auth(.*)/ }) == 0) then
-	puts "vrethikan system authentication failures :".bg_red
+	puts "system authentication failures have been found :".bg_red
 	puts "\n"
-	typose_apo("ailed", useful_files_array.select {
+	print_from("ailed", useful_files_array.select {
 	    |blah| blah =~ /\/var\/log\/auth(.*)/ })
 else
-	puts "den yparxoun system authentication errors".bg_green
+	puts "there are no system authentication failures".bg_green
 end
 puts "\n__________________________________________________________\n\n"
 ##########
@@ -113,13 +112,13 @@ puts "\n__________________________________________________________\n\n"
 
  
 #
-# filesystem usage
+#filesystem usage
 #########
 df_output=`df -h`
 for df_line in df_output.split("\n") do
 	df_line_split=df_line.split(' ')
 	if df_line_split[4].delete('%').to_i > 60 then
-		puts "to filesystem : %s exei utilization %s".bg_red % [df_line_split[0], df_line_split[4]]
+		puts "filesystem : %s is %s utilized".bg_red % [df_line_split[0], df_line_split[4]]
 	puts "\n__________________________________________________________\n\n"
 	end
 end 
@@ -130,7 +129,7 @@ end
 #
 #uptime
 #########
-puts "to uptime einai : %s" % `uptime`
+puts "the uptime is : %s" % `uptime`
 puts "\n__________________________________________________________\n\n"
 ########
 
@@ -155,7 +154,7 @@ mem_info_line=blah.split
 				end
 				}
 
-puts "h synolikh mnhmh einai %iMB, ek ton opoion ta %iMB einai eleythera \n\t\t(cached : %iMB, buffers : %iMB, entelos eleythera : %iMB)" % [mem_total/1024, (mem_free + mem_buffered + mem_cached)/1024, mem_cached/1024, mem_buffered/1024, mem_free/1024]
+puts "the total memory is %iMB, out of which %iMB are free \n\t\t(cached : %iMB, buffers : %iMB, unused : %iMB)" % [mem_total/1024, (mem_free + mem_buffered + mem_cached)/1024, mem_cached/1024, mem_buffered/1024, mem_free/1024]
 puts "\n__________________________________________________________\n\n"
 ########
 
@@ -167,14 +166,14 @@ puts "\n__________________________________________________________\n\n"
 #########
 tempvar2=`netstat -an`
 if tempvar2.include?(":22 ") then
-	puts "ta active ssh sessions einai : \n\n"
+	puts "the active ssh sessions are : \n\n"
 	for tempvar1 in tempvar2.split("\n") do
 		if ((tempvar1.include?(":22")) && !(tempvar1.include?("LISTEN"))) then
 			puts tempvar1
 		end
 	end
 else
-	puts "den yparxoun anoixta ssh sessions (!?!??!?!?!!?!!?!?)".bg_red
+	puts "there are no active ssh sessions (!?!??!?!?!!?!!?!?)".bg_red
 end
 puts "\n__________________________________________________________\n\n"
 #########
@@ -189,10 +188,10 @@ dns_ip=`nslookup system-v.no-ip.biz`
 dns_ip=dns_ip.split()[-1]
 
 if (dns_ip == public_ip) then
-	puts "h public ip einai : %s kai to record sto no-ip einai sygxronismeno".bg_green % [public_ip]
+	puts "the public ip is : %s and the no-ip dns record is synchronized".bg_green % [public_ip]
 	puts "\n__________________________________________________________\n\n"
 else
-	puts "h public ip einai : %s eno to dns record tou system-v.no-ip.biz deixnei sto %s".bg_red % [public_ip, dns_ip]
+	puts "the public ip is : %s while the dns record for system-v.no-ip.biz points at %s".bg_red % [public_ip, dns_ip]
 	puts "\n__________________________________________________________\n\n"
 end
 ########
